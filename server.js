@@ -14,6 +14,9 @@ app.get("/", (req, res) => {
     res.send("Home Page")
 })
 
+app.use(express.json())
+
+
 //connect to database
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {

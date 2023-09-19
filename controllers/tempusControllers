@@ -1,11 +1,43 @@
 const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler')
+const axios = require('axios');
 
 //get local time
 const getCurrentTime = asyncHandler(async (req, res) => {
 
+    const { city, paymentID, paymentType } = req.body
 
-    res.send("Get me the time")
+    if (!city) {
+
+    }
+
+
+    // Define your API endpoint
+    const apiUrl = process.env.BASE_URL + '/timezone.json';
+
+
+    // Define the request data
+    const requestData = {
+        params: {
+            key: process.env.TEMPUSKEY,
+            q: city, // Replace with the value from the request body
+
+        },
+    };
+
+    // Make a GET request using Axios
+    axios.get(apiUrl, requestData)
+        .then((response) => {
+            // Handle the response data
+            console.log(response.data);
+        })
+        .catch((error) => {
+            // Handle errors
+            console.error(error);
+        });
+
+    res.send("Done")
+
 
 
 

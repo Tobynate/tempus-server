@@ -4,11 +4,13 @@ const mongoose = require('mongoose')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
+const errorHandler = require("./middleware/errorMiddleware")
+
+
 
 
 //import routes
 const tempusRoutes = require("./routes/tempusRoutes")
-
 // start express app
 const app = express()
 
@@ -17,6 +19,10 @@ app.get("/", (req, res) => {
     res.send("Home Page")
 })
 
+//middleware
+app.use((req, res, next) => {
+    next()
+})
 app.use(express.json())
 app.use(cookieParser())
 app.use(express.urlencoded({ extended: false }))
@@ -29,6 +35,10 @@ app.use(cors({
 
 //routes middleware
 app.use("/api/tempus", tempusRoutes)
+
+
+//error middleware
+app.use(errorHandler)
 
 
 //connect to database

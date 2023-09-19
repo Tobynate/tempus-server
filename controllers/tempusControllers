@@ -5,10 +5,14 @@ const axios = require('axios');
 //get local time
 const getCurrentTime = asyncHandler(async (req, res) => {
 
-    const { city, paymentID, paymentType } = req.body
+    // get the city from the app
+    const { city } = req.body
 
+    //validate the city
     if (!city) {
+        res.status(404);
 
+        throw new Error('City is required');
     }
 
 
@@ -20,26 +24,51 @@ const getCurrentTime = asyncHandler(async (req, res) => {
     const requestData = {
         params: {
             key: process.env.TEMPUSKEY,
-            q: city, // Replace with the value from the request body
+            q: city,
 
         },
     };
+
+    // Function to format a date in "Month Day, Year" format
+    function formatDate(dateString) {
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString(undefined, options);
+    }
+
+    // Function to convert time to 12-hour format
+    function formatTime(timeString) {
+        return new Date(timeString).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: true,
+        });
+    }
 
     // Make a GET request using Axios
     axios.get(apiUrl, requestData)
         .then((response) => {
             // Handle the response data
-            console.log(response.data);
+            // Extract the relevant data from the response
+            const { tz_id, localtime, localtime_epoch } = response.data.location;
+            // Format the date and time
+            const formattedDate = formatDate(localtime);
+            const formattedTime = formatTime(localtime);
+
+            // Create an object with the formatted data
+            const formattedData = {
+                zone: tz_id,
+                date: formattedDate,
+                time: formattedTime,
+            };
+
+            // Send the extracted data as a JSON response with a status code of 200
+            res.status(200).json(formattedData);
         })
         .catch((error) => {
             // Handle errors
             console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
         });
-
-    res.send("Done")
-
-
-
 
 })
 

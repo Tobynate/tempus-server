@@ -6,6 +6,9 @@ const bodyParser = require('body-parser')
 const cookieParser = require('cookie-parser')
 
 
+//import routes
+const tempusRoutes = require("./routes/tempusRoutes")
+
 // start express app
 const app = express()
 
@@ -22,6 +25,10 @@ app.use(cors({
     origin: ["http://localhost:3000"],
     credentials: true
 }))
+
+
+//routes middleware
+app.use("/api/tempus", tempusRoutes)
 
 
 //connect to database

@@ -1,0 +1,16 @@
+const mongoose = require('mongoose');
+const asyncHandler = require('express-async-handler')
+
+//get local time
+const getCurrentTime = asyncHandler(async (req, res) => {
+
+
+    res.send("Get me the time")
+
+
+
+})
+
+module.exports = {
+    getCurrentTime
+}

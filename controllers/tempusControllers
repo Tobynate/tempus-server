@@ -1,77 +1,130 @@
-const mongoose = require('mongoose');
-const asyncHandler = require('express-async-handler')
-const axios = require('axios');
+const mongoose = require("mongoose")
+const asyncHandler = require("express-async-handler")
+const axios = require("axios")
+const errorHandler = require("../middleware/errorMiddleware")
+const { response } = require("express")
+
+let tempModel = require("../models/tempModel")
 
 //get local time
 const getCurrentTime = asyncHandler(async (req, res) => {
+	const { city, paymentID, paymentType } = req.body
 
-    // get the city from the app
-    const { city } = req.body
+	if (!city) {
+	}
 
-    //validate the city
-    if (!city) {
-        res.status(404);
+	console.log("Here bro")
+	// Define your API endpoint
+	const apiUrl = process.env.BASE_URL + "/timezone.json"
 
-        throw new Error('City is required');
-    }
+	// Define the request data
+	const requestData = {
+		params: {
+			key: process.env.TEMPUSKEY,
+			q: city, // Replace with the value from the request body
+		},
+	}
 
+	// Make a GET request using Axios
+	axios
+		.get(apiUrl, requestData)
+		.then((response) => {
+			// Handle the response data
+			console.log(response.data)
+		})
+		.catch((error) => {
+			// Handle errors
+			console.error(error)
+		})
 
-    // Define your API endpoint
-    const apiUrl = process.env.BASE_URL + '/timezone.json';
+	res.send("Done")
+})
 
+//Get Future Temperature(6 hours)
+const getCurrentFutureTemp = asyncHandler(async (req, res) => {
+	const { city, paymentID, paymentType } = req.body
 
-    // Define the request data
-    const requestData = {
-        params: {
-            key: process.env.TEMPUSKEY,
-            q: city,
+	if (!city) {
+	}
+	const apiUrl = process.env.BASE_URL + "/forecast.json"
 
-        },
-    };
+	let date = new Date()
+	let currentHour = date.getHours()
+	let parsedHour = currentHour + 6
+	if (parsedHour > 24) parsedHour = 24
 
-    // Function to format a date in "Month Day, Year" format
-    function formatDate(dateString) {
-        const options = { year: 'numeric', month: 'long', day: 'numeric' };
-        return new Date(dateString).toLocaleDateString(undefined, options);
-    }
+	let tempModels = []
 
-    // Function to convert time to 12-hour format
-    function formatTime(timeString) {
-        return new Date(timeString).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: true,
-        });
-    }
+	let responses = []
+	let promises = []
+	for (let i = 0; i < 6; i++) {
+		// Define the request data
+		const requestData = {
+			params: {
+				key: process.env.TEMPUSKEY,
+				q: "Kwara",
+				hour: currentHour + i + 1,
+			},
+		}
+		// Make a GET request using Axios and store the promise
+		let promise = axios
+			.get(apiUrl, requestData)
+			.then((response) => {
+				responses.push(response.data)
+			})
+			.catch((error) => {
+				// Handle errors
+				console.error(error)
+			})
 
-    // Make a GET request using Axios
-    axios.get(apiUrl, requestData)
-        .then((response) => {
-            // Handle the response data
-            // Extract the relevant data from the response
-            const { tz_id, localtime, localtime_epoch } = response.data.location;
-            // Format the date and time
-            const formattedDate = formatDate(localtime);
-            const formattedTime = formatTime(localtime);
-
-            // Create an object with the formatted data
-            const formattedData = {
-                zone: tz_id,
-                date: formattedDate,
-                time: formattedTime,
-            };
-
-            // Send the extracted data as a JSON response with a status code of 200
-            res.status(200).json(formattedData);
-        })
-        .catch((error) => {
-            // Handle errors
-            console.error(error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        });
-
+		promises.push(promise)
+	}
+	// Wait for all promises to resolve
+	Promise.all(promises).then(() => {
+		//console.log(responses[0].forecast.forecastday[0].hour[0].time)
+		responses.forEach((element) => {
+			if (
+				JSON.stringify(element) != "" &&
+				JSON.stringify(element).includes("forecast") &&
+				JSON.stringify(element.forecast).includes("forecastday") &&
+				JSON.stringify(element.forecast.forecastday[0]).includes("hour") &&
+				JSON.stringify(element.forecast.forecastday[0].hour).includes("time") &&
+				JSON.stringify(element.forecast.forecastday[0].hour[0]).includes(
+					"condition"
+				) &&
+				JSON.stringify(
+					element.forecast.forecastday[0].hour[0].condition
+				).includes("text") &&
+				JSON.stringify(element).includes("current") &&
+				JSON.stringify(element.current).includes("temp_c")
+			) {
+				tempModels.push(
+					(tempModel = {
+						id: `hour_${new Date(
+							element.forecast.forecastday[0].hour[0].time
+						).getHours()}`,
+						time: new Date(
+							element.forecast.forecastday[0].hour[0].time
+						).getHours(),
+						temperature: element.forecast.forecastday[0].hour[0].temp_c,
+						currentTemp: element.current.temp_c,
+						weatherCondition:
+							element.forecast.forecastday[0].hour[0].condition.text,
+					})
+				)
+			} else {
+				console.log("Undefined value")
+			}
+		})
+		tempModels.sort(function (a, b) {
+			return a.time - b.time
+		})
+		res.send(tempModels)
+		//res.send(responses)
+	})
 })
 
 module.exports = {
-    getCurrentTime
+	getCurrentTime,
+	getCurrentFutureTemp,
 }

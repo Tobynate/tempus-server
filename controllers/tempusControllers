@@ -120,6 +120,7 @@ const getCurrentFutureTemp = asyncHandler(async (req, res) => {
 			return a.time - b.time
 		})
 		res.send(tempModels)
+		console.log("Branch Status")
 		//res.send(responses)
 	})
 })
